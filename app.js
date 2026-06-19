@@ -721,29 +721,68 @@ const app = (() => {
     });
 
 
-    // Handle menu nav item clicks
-    document.querySelectorAll('.nav-link-item').forEach(link => {
+    // Mobile Menu Helper Functions
+    const mobileMenuTrigger = document.querySelector('.mobile-menu-trigger');
+    const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+
+    function closeMobileMenu() {
+      if (mobileMenuOverlay && mobileMenuOverlay.classList.contains('open')) {
+        mobileMenuOverlay.classList.remove('open');
+        mobileMenuOverlay.setAttribute('aria-hidden', 'true');
+        if (mobileMenuTrigger) {
+          mobileMenuTrigger.classList.remove('active');
+          mobileMenuTrigger.setAttribute('aria-expanded', 'false');
+        }
+      }
+    }
+
+    if (mobileMenuTrigger && mobileMenuOverlay) {
+      mobileMenuTrigger.addEventListener('click', () => {
+        const isOpen = mobileMenuOverlay.classList.contains('open');
+        if (isOpen) {
+          closeMobileMenu();
+        } else {
+          mobileMenuOverlay.classList.add('open');
+          mobileMenuOverlay.setAttribute('aria-hidden', 'false');
+          mobileMenuTrigger.classList.add('active');
+          mobileMenuTrigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+    if (mobileMenuBackdrop) {
+      mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
+    }
+
+    // Handle menu nav item clicks (Desktop & Mobile Staggered Menu)
+    document.querySelectorAll('.nav-link-item, .mobile-menu-link-item').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const id = link.id;
-        if (id === 'nav-home') {
+        if (id === 'nav-home' || id === 'mobile-nav-home') {
           window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (id === 'nav-decay') {
+        } else if (id === 'nav-decay' || id === 'mobile-nav-decay') {
           const section = document.getElementById('assembly-section');
           if (section) section.scrollIntoView({ behavior: 'smooth' });
-        } else if (id === 'nav-calc') {
+        } else if (id === 'nav-calc' || id === 'mobile-nav-calc') {
           const section = document.getElementById('calculator-section');
           if (section) section.scrollIntoView({ behavior: 'smooth' });
-        } else if (id === 'nav-reads') {
+        } else if (id === 'nav-reads' || id === 'mobile-nav-reads') {
           const section = document.getElementById('articles-section');
           if (section) section.scrollIntoView({ behavior: 'smooth' });
-        } else if (id === 'nav-library') {
+        } else if (id === 'nav-library' || id === 'mobile-nav-library') {
           const libraryEl = document.getElementById('articles-library');
           if (libraryEl) {
             libraryEl.classList.add('open');
             libraryEl.setAttribute('aria-hidden', 'false');
             document.body.classList.add('scroll-locked');
           }
+        }
+
+        // Close mobile menu on click
+        if (link.classList.contains('mobile-menu-link-item')) {
+          closeMobileMenu();
         }
       });
     });
