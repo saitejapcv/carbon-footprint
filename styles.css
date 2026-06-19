@@ -162,7 +162,13 @@ body {
 
 .hero-title {
   font-family: 'Syncopate', var(--font-sans);
-  font-size: 11vw;
+  --scroll-progress: 0;
+  --start-size: 11vw;
+  --end-size: 24px;
+  --start-gap: 18px;
+  --end-gap: 3px;
+  font-size: calc(var(--start-size) - (var(--start-size) - var(--end-size)) * var(--scroll-progress));
+  gap: calc(var(--start-gap) - (var(--start-gap) - var(--end-gap)) * var(--scroll-progress));
   font-weight: 700;
   /* Bolder font weight */
   color: #E2E2E2;
@@ -172,8 +178,6 @@ body {
   display: inline-flex;
   /* inline-flex allows JS centering/offset translate */
   justify-content: flex-start;
-  gap: 18px;
-  /* 15-20px space between letters */
   white-space: nowrap;
   transform-origin: left center;
   will-change: transform, font-size, gap;
@@ -1444,8 +1448,8 @@ body.scroll-locked {
   }
 
   .hero-title {
-    font-size: 9vw;
-    gap: 10px;
+    --start-size: 8vw;
+    --start-gap: 10px;
   }
 
   .nav-links {
@@ -1561,8 +1565,8 @@ body.scroll-locked {
   }
 
   .hero-title {
-    font-size: 7.2vw;
-    gap: 8px;
+    --start-size: 6.8vw;
+    --start-gap: 8px;
   }
 
   .nav-links {
@@ -1775,8 +1779,16 @@ body.scroll-locked {
 /* --- SMALL MOBILE (≤420px) --- */
 @media (max-width: 420px) {
   .hero-title {
-    font-size: 6vw;
-    gap: 5px;
+    --start-size: 5.6vw;
+    --start-gap: 4px;
+  }
+}
+
+/* --- ULTRA SMALL MOBILE (≤360px) --- */
+@media (max-width: 360px) {
+  .hero-title {
+    --start-size: 5.2vw;
+    --start-gap: 3px;
   }
 
   .tagline-text {

@@ -220,29 +220,8 @@ const app = (() => {
 
     const easedProgress = Math.pow(progress, 1.4);
  
-    // 1. Font Size & Letter Gap Shrinking (Responsive start values)
-    let startSizeMultiplier = 11;
-    let startGapValue = 18;
-
-    if (cachedVW <= 420) {
-      startSizeMultiplier = 6;
-      startGapValue = 5;
-    } else if (cachedVW <= 640) {
-      startSizeMultiplier = 7.2;
-      startGapValue = 8;
-    } else if (cachedVW <= 768) {
-      startSizeMultiplier = 9;
-      startGapValue = 10;
-    }
-
-    const startSize = (startSizeMultiplier * cachedVW) / 100;
-    const endSize = 24;
-    heroTitle.style.fontSize = `${startSize - (startSize - endSize) * easedProgress}px`;
- 
-    // 2. Letter Gap Shrinking
-    const endGap = 3;
-    const currentGap = startGapValue - (startGapValue - endGap) * easedProgress;
-    heroTitle.style.gap = `${currentGap}px`;
+    // 1 & 2. Sizing and Gap progress driven via CSS custom properties
+    heroTitle.style.setProperty('--scroll-progress', easedProgress);
  
     // 3. Nav Links Opacity
     navLinks.style.opacity = easedProgress;
