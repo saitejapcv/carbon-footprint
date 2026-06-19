@@ -84,6 +84,202 @@ const app = (() => {
     return hex;
   }
 
+  function createGlassSurface(element, options = {}) {
+    if (!element) return;
+    
+    // Default options matching React component props
+    const borderRadius = options.borderRadius !== undefined ? options.borderRadius : 16;
+    const borderWidth = options.borderWidth !== undefined ? options.borderWidth : 0.07;
+    const brightness = options.brightness !== undefined ? options.brightness : 50;
+    const opacity = options.opacity !== undefined ? options.opacity : 0.93;
+    const blur = options.blur !== undefined ? options.blur : 11;
+    const displace = options.displace !== undefined ? options.displace : 0;
+    const backgroundOpacity = options.backgroundOpacity !== undefined ? options.backgroundOpacity : 0.15;
+    const saturation = options.saturation !== undefined ? options.saturation : 1.8;
+    const distortionScale = options.distortionScale !== undefined ? options.distortionScale : -180;
+    const redOffset = options.redOffset !== undefined ? options.redOffset : 0;
+    const greenOffset = options.greenOffset !== undefined ? options.greenOffset : 10;
+    const blueOffset = options.blueOffset !== undefined ? options.blueOffset : 20;
+    const xChannel = options.xChannel || 'R';
+    const yChannel = options.yChannel || 'G';
+    const mixBlendMode = options.mixBlendMode || 'difference';
+
+    // Generate unique IDs for the SVG filter definitions
+    const uniqueId = Math.random().toString(36).substring(2, 11);
+    const filterId = `glass-filter-${uniqueId}`;
+    const redGradId = `red-grad-${uniqueId}`;
+    const blueGradId = `blue-grad-${uniqueId}`;
+
+    // Wrap the text content in contentDiv
+    const originalHTML = element.innerHTML;
+    element.innerHTML = '';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'glass-surface__content';
+    contentDiv.innerHTML = originalHTML;
+
+    // Create the inline SVG filter
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgEl.setAttribute('class', 'glass-surface__filter');
+    svgEl.innerHTML = `
+      <defs>
+        <filter id="${filterId}" color-interpolation-filters="sRGB" x="0%" y="0%" width="100%" height="100%">
+          <feImage id="feimage-${uniqueId}" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="map" />
+
+          <feDisplacementMap id="redchannel-${uniqueId}" in="SourceGraphic" in2="map" result="dispRed" />
+          <feColorMatrix
+            in="dispRed"
+            type="matrix"
+            values="1 0 0 0 0
+                    0 0 0 0 0
+                    0 0 0 0 0
+                    0 0 0 1 0"
+            result="red"
+          />
+
+          <feDisplacementMap
+            id="greenchannel-${uniqueId}"
+            in="SourceGraphic"
+            in2="map"
+            result="dispGreen"
+          />
+          <feColorMatrix
+            in="dispGreen"
+            type="matrix"
+            values="0 0 0 0 0
+                    0 1 0 0 0
+                    0 0 0 0 0
+                    0 0 0 1 0"
+            result="green"
+          />
+
+          <feDisplacementMap id="bluechannel-${uniqueId}" in="SourceGraphic" in2="map" result="dispBlue" />
+          <feColorMatrix
+            in="dispBlue"
+            type="matrix"
+            values="0 0 0 0 0
+                    0 0 0 0 0
+                    0 0 1 0 0
+                    0 0 0 1 0"
+            result="blue"
+          />
+
+          <feBlend in="red" in2="green" mode="screen" result="rg" />
+          <feBlend in="rg" in2="blue" mode="screen" result="output" />
+          <feGaussianBlur id="blur-${uniqueId}" in="output" stdDeviation="${displace}" />
+        </filter>
+      </defs>
+    `;
+
+    element.appendChild(svgEl);
+    element.appendChild(contentDiv);
+
+    element.classList.add('glass-surface');
+
+    // Check backdrop-filter capability for SVG filter URLs
+    const supportsSVGFilters = () => {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+      const isWebkit = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+      const isFirefox = /Firefox/.test(navigator.userAgent);
+      if (isWebkit || isFirefox) return false;
+      const div = document.createElement('div');
+      div.style.backdropFilter = `url(#${filterId})`;
+      return div.style.backdropFilter !== '';
+    };
+
+    const svgSupported = supportsSVGFilters();
+    element.classList.add(svgSupported ? 'glass-surface--svg' : 'glass-surface--fallback');
+
+    // Apply variables to styling
+    element.style.borderRadius = `${borderRadius}px`;
+    element.style.setProperty('--glass-frost', backgroundOpacity);
+    element.style.setProperty('--glass-saturation', saturation);
+    element.style.setProperty('--filter-id', `url(#${filterId})`);
+
+    const feImage = document.getElementById(`feimage-${uniqueId}`);
+    const redChannel = document.getElementById(`redchannel-${uniqueId}`);
+    const greenChannel = document.getElementById(`greenchannel-${uniqueId}`);
+    const blueChannel = document.getElementById(`bluechannel-${uniqueId}`);
+
+    if (redChannel) {
+      redChannel.setAttribute('scale', (distortionScale + redOffset).toString());
+      redChannel.setAttribute('xChannelSelector', xChannel);
+      redChannel.setAttribute('yChannelSelector', yChannel);
+    }
+    if (greenChannel) {
+      greenChannel.setAttribute('scale', (distortionScale + greenOffset).toString());
+      greenChannel.setAttribute('xChannelSelector', xChannel);
+      greenChannel.setAttribute('yChannelSelector', yChannel);
+    }
+    if (blueChannel) {
+      blueChannel.setAttribute('scale', (distortionScale + blueOffset).toString());
+      blueChannel.setAttribute('xChannelSelector', xChannel);
+      blueChannel.setAttribute('yChannelSelector', yChannel);
+    }
+
+    const generateDisplacementMap = () => {
+      const rect = element.getBoundingClientRect();
+      const actualWidth = Math.ceil(rect.width || 300);
+      const actualHeight = Math.ceil(rect.height || 60);
+      const edgeSize = Math.min(actualWidth, actualHeight) * (borderWidth * 0.5);
+
+      const svgContent = `
+        <svg viewBox="0 0 ${actualWidth} ${actualHeight}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="${redGradId}" x1="100%" y1="0%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#0000"/>
+              <stop offset="100%" stop-color="red"/>
+            </linearGradient>
+            <linearGradient id="${blueGradId}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#0000"/>
+              <stop offset="100%" stop-color="blue"/>
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" fill="black"></rect>
+          <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${redGradId})" />
+          <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${blueGradId})" style="mix-blend-mode: ${mixBlendMode}" />
+          <rect x="${edgeSize}" y="${edgeSize}" width="${actualWidth - edgeSize * 2}" height="${actualHeight - edgeSize * 2}" rx="${borderRadius}" fill="hsl(0 0% ${brightness}% / ${opacity})" style="filter:blur(${blur}px)" />
+        </svg>
+      `;
+
+      return `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
+    };
+
+    const updateDisplacementMap = () => {
+      if (feImage) {
+        feImage.setAttribute('href', generateDisplacementMap());
+      }
+    };
+
+    updateDisplacementMap();
+
+    // ResizeObserver updates map on resize (keeps shape aligned across screens)
+    const resizeObserver = new ResizeObserver(() => {
+      setTimeout(updateDisplacementMap, 0);
+    });
+    resizeObserver.observe(element);
+  }
+
+  function initGlassSurfaces() {
+    const titles = document.querySelectorAll('.card-title');
+    titles.forEach(el => {
+      createGlassSurface(el, {
+        borderRadius: 16,
+        backgroundOpacity: 0.15,
+        saturation: 1.8,
+        blur: 11,
+        borderWidth: 0.05,
+        brightness: 55,
+        opacity: 0.9,
+        displace: 1.5,
+        distortionScale: -120,
+        redOffset: 0,
+        greenOffset: 8,
+        blueOffset: 16
+      });
+    });
+  }
+
   function interpolateColor(color1, color2, factor) {
     
     const h1 = normalizeHex(color1);
@@ -1288,6 +1484,25 @@ const app = (() => {
 
       grid.appendChild(card);
     });
+
+    // Initialize GlassSurface on newly created dynamic titles
+    const libTitles = grid.querySelectorAll('.lib-card-title');
+    libTitles.forEach(el => {
+      createGlassSurface(el, {
+        borderRadius: 12,
+        backgroundOpacity: 0.15,
+        saturation: 1.8,
+        blur: 10,
+        borderWidth: 0.05,
+        brightness: 55,
+        opacity: 0.9,
+        displace: 1.2,
+        distortionScale: -100,
+        redOffset: 0,
+        greenOffset: 6,
+        blueOffset: 12
+      });
+    });
   }
 
   function initCalculator() {
@@ -1891,6 +2106,7 @@ const app = (() => {
     initScrollStack();
     initArticleModal();
     initArticlesLibrary();
+    initGlassSurfaces();
   }
 
   // Public functions exposed
