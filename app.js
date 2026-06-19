@@ -261,8 +261,8 @@ const app = (() => {
   }
 
   function initGlassSurfaces() {
-    const el = document.getElementById('shared-glass-title');
-    if (el) {
+    const els = document.querySelectorAll('.scroll-stack-card .card-title');
+    els.forEach(el => {
       createGlassSurface(el, {
         borderRadius: 16,
         backgroundOpacity: 0.15,
@@ -277,46 +277,7 @@ const app = (() => {
         greenOffset: 8,
         blueOffset: 16
       });
-    }
-    updateActiveGlassTitle();
-  }
-
-  let activeTitleText = '';
-
-  function updateActiveGlassTitle() {
-    const activeGlassTitle = document.getElementById('shared-glass-title');
-    if (!activeGlassTitle) return;
-
-    if (!cards || cards.length === 0) {
-      const scroller = document.querySelector('.scroll-stack-scroller');
-      if (scroller) {
-        cards = Array.from(scroller.querySelectorAll('.scroll-stack-card'));
-      }
-    }
-    if (!cards || cards.length === 0) return;
-
-    const stickyTop = getStickyParams().stickyTopPx;
-    let activeCard = cards[0];
-
-    for (let i = 0; i < cards.length; i++) {
-      const rect = cards[i].getBoundingClientRect();
-      if (rect.top <= stickyTop + 30) {
-        activeCard = cards[i];
-      }
-    }
-
-    if (activeCard) {
-      const originalTitle = activeCard.querySelector('.card-title');
-      const titleText = originalTitle ? originalTitle.textContent.trim() : '';
-
-      if (titleText && titleText !== activeTitleText) {
-        activeTitleText = titleText;
-        const glassContent = activeGlassTitle.querySelector('.glass-surface__content');
-        if (glassContent) {
-          glassContent.textContent = titleText;
-        }
-      }
-    }
+    });
   }
 
   function interpolateColor(color1, color2, factor) {
@@ -822,7 +783,6 @@ const app = (() => {
       const scrollTop = window.scrollY;
       const maxScroll = window.innerHeight * 0.35;
       targetScrollProgress = Math.min(1, Math.max(0, scrollTop / maxScroll));
-      updateActiveGlassTitle();
       startAnimationLoop();
     }
 
