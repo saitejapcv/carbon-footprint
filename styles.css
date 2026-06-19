@@ -156,8 +156,9 @@ body {
   top: 30px;
   left: 60px;
   width: calc(100% - 120px);
-  z-index: 10;
+  z-index: 1000; /* Elevate to be above page elements */
   box-sizing: border-box;
+  pointer-events: auto !important; /* Force pointer-events even when hero is collapsed */
 }
 
 .hero-title {
@@ -1559,9 +1560,9 @@ body.scroll-locked {
     margin-top: 4vh;
     left: 20px;
     width: calc(100% - 40px);
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .hero-title {
@@ -2786,6 +2787,7 @@ body.scroll-locked {
   box-sizing: border-box;
   flex-direction: column;
   justify-content: space-between;
+  pointer-events: auto !important; /* Force pointer events */
 }
 
 .mobile-menu-trigger .bar {
