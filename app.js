@@ -261,8 +261,8 @@ const app = (() => {
   }
 
   function initGlassSurfaces() {
-    const titles = document.querySelectorAll('.card-title');
-    titles.forEach(el => {
+    const el = document.getElementById('shared-glass-title');
+    if (el) {
       createGlassSurface(el, {
         borderRadius: 16,
         backgroundOpacity: 0.15,
@@ -277,7 +277,46 @@ const app = (() => {
         greenOffset: 8,
         blueOffset: 16
       });
-    });
+    }
+    updateActiveGlassTitle();
+  }
+
+  let activeTitleText = '';
+
+  function updateActiveGlassTitle() {
+    const activeGlassTitle = document.getElementById('shared-glass-title');
+    if (!activeGlassTitle) return;
+
+    if (!cards || cards.length === 0) {
+      const scroller = document.querySelector('.scroll-stack-scroller');
+      if (scroller) {
+        cards = Array.from(scroller.querySelectorAll('.scroll-stack-card'));
+      }
+    }
+    if (!cards || cards.length === 0) return;
+
+    const stickyTop = getStickyParams().stickyTopPx;
+    let activeCard = cards[0];
+
+    for (let i = 0; i < cards.length; i++) {
+      const rect = cards[i].getBoundingClientRect();
+      if (rect.top <= stickyTop + 30) {
+        activeCard = cards[i];
+      }
+    }
+
+    if (activeCard) {
+      const originalTitle = activeCard.querySelector('.card-title');
+      const titleText = originalTitle ? originalTitle.textContent.trim() : '';
+
+      if (titleText && titleText !== activeTitleText) {
+        activeTitleText = titleText;
+        const glassContent = activeGlassTitle.querySelector('.glass-surface__content');
+        if (glassContent) {
+          glassContent.textContent = titleText;
+        }
+      }
+    }
   }
 
   function interpolateColor(color1, color2, factor) {
@@ -783,6 +822,7 @@ const app = (() => {
       const scrollTop = window.scrollY;
       const maxScroll = window.innerHeight * 0.35;
       targetScrollProgress = Math.min(1, Math.max(0, scrollTop / maxScroll));
+      updateActiveGlassTitle();
       startAnimationLoop();
     }
 
@@ -1485,24 +1525,6 @@ const app = (() => {
       grid.appendChild(card);
     });
 
-    // Initialize GlassSurface on newly created dynamic titles
-    const libTitles = grid.querySelectorAll('.lib-card-title');
-    libTitles.forEach(el => {
-      createGlassSurface(el, {
-        borderRadius: 12,
-        backgroundOpacity: 0.15,
-        saturation: 1.8,
-        blur: 10,
-        borderWidth: 0.05,
-        brightness: 55,
-        opacity: 0.9,
-        displace: 1.2,
-        distortionScale: -100,
-        redOffset: 0,
-        greenOffset: 6,
-        blueOffset: 12
-      });
-    });
   }
 
   function initCalculator() {
