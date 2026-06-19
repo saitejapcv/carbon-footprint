@@ -1980,7 +1980,7 @@ body.scroll-locked {
 
 .articles-wrapper {
   width: 100%;
-  max-width: 900px;
+  max-width: 1400px; /* Matches 1300px cards plus padding */
   margin: 0 auto;
   padding: 0 40px;
   box-sizing: border-box;
