@@ -70,3 +70,16 @@ $$\text{Daily Emissions (kg)} = \frac{\text{Annual Emissions (Tonnes)} \times 10
 * **Asset Location**: Assumes that the educational articles are stored locally under `content/articles/` named `01-daily-life-carbon-footprint.md` through `15-how-to-talk-to-friends-and-family.md`.
 * **Libraries**: Relies on GSAP (GreenSock Animation Platform) and ScrollTrigger loaded via a public CDN for scroll animation triggering and timeline interpolation.
 * **Local Timezone**: Uses the browser's `Intl.DateTimeFormat().resolvedOptions().timeZone` to display the active local time zone in the footer dashboard.
+
+---
+
+## 5. Secure Deployment
+* **Live Site URL**: [https://carbon-footprint-saiteja.web.app](https://carbon-footprint-saiteja.web.app)
+* **Hosting Platform**: Firebase Hosting (Classic) with secure content distribution via a global CDN.
+* **Security Headers Configured**:
+  * **HSTS (Strict-Transport-Security)**: Enforces SSL/TLS connections for a duration of 1 year.
+  * **Content Security Policy (CSP)**: Restricts asset execution (`default-src 'self'`). Scripts are allowed exclusively from local files and the secure Cloudflare CDN (`https://cdnjs.cloudflare.com`). Font styling resources are locked down to Google Fonts API hosts.
+  * **X-Frame-Options (DENY)** & **frame-ancestors 'none'**: Defends the site from clickjacking attacks.
+  * **X-Content-Type-Options (nosniff)**: Safeguards against MIME-sniffing vulnerabilities.
+  * **Permissions Policy**: Hard-disables accesses to browser hardware sensors (microphone, camera, accelerometer, geolocation, etc.).
+
