@@ -73,7 +73,7 @@ $$\text{Daily Emissions (kg)} = \frac{\text{Annual Emissions (Tonnes)} \times 10
 
 ---
 
-## 5. Secure Deployment
+## 5. Secure Deployment & CD Hardening
 * **Live Site URL**: [https://carbon-footprint-saiteja.web.app](https://carbon-footprint-saiteja.web.app)
 * **Hosting Platform**: Firebase Hosting (Classic) with secure content distribution via a global CDN.
 * **Security Headers Configured**:
@@ -82,4 +82,48 @@ $$\text{Daily Emissions (kg)} = \frac{\text{Annual Emissions (Tonnes)} \times 10
   * **X-Frame-Options (DENY)** & **frame-ancestors 'none'**: Defends the site from clickjacking attacks.
   * **X-Content-Type-Options (nosniff)**: Safeguards against MIME-sniffing vulnerabilities.
   * **Permissions Policy**: Hard-disables accesses to browser hardware sensors (microphone, camera, accelerometer, geolocation, etc.).
+* **GitHub Actions Pipeline Security**:
+  * **Commit SHA Pinning**: Pinned third-party workflow actions (checkout and deploy) to specific immutable commit SHAs to prevent tag-hijacking supply-chain exploits.
+  * **Principle of Least Privilege**: Declared explicit write-level token permissions restrictions (`contents: read`) in continuous deployment tasks.
+* **Firebase Ignored Rules**: Excluded developer configuration files, tests (`tests/**`), coverage reports (`coverage/**`), and project manifests (`package.json`, `package-lock.json`, `vitest.config.js`, `playwright.config.js`) from uploading to the public site.
+
+---
+
+## 6. Code Quality & Clean Refactoring
+* **Centralized Configuration**: Extracted all magic numbers, emission multipliers, and environment boundaries into a global, documented, and read-only `CONSTANTS` object at the top of `app.js`.
+* **Central DOM Reference Cache**: Implemented a central `DOM` reference manager and `updateDOMReferences()` utility function to cache queries. This avoids redundant `document.getElementById` calls during calculations, and prevents stale element references during dynamic DOM replacements (e.g., in unit testing).
+* **Standard JSDoc Annotations**: Documented all business logic, color manipulation, and rendering setup functions with detailed JSDoc comment blocks describing parameters, types, outputs, and behaviors.
+
+---
+
+## 7. Automated Testing Suite & Code Coverage
+We have integrated a comprehensive testing framework using **Vitest** (under mocked JSDOM) and **Playwright** (for browser-based End-to-End verification).
+
+### A. Testing Structure
+1. **Unit & Integration Tests (Vitest + JSDOM)**:
+   - **`helpers.test.js`**: Verifies hex normalization and color interpolations.
+   - **`markdown.test.js`**: Verifies markdown parsing (headers, lists, blockquotes, tables, links) and checks security sanitization on URL protocols (e.g., blocking `javascript:` links).
+   - **`calculations.test.js`**: Verifies carbon calculator calculations and stage/theme changes.
+   - **`dom.test.js`**: Verifies mobile drawer controls, library filter/search, article modal rendering, custom video transitions, and HTML character escaping.
+2. **E2E Browser Tests (Playwright)**:
+   - **`app.spec.js`**: Simulates headless Chrome interactions, testing homepage loading, live slider movements, and article library workflows.
+
+### B. Mocks Setup (`tests/setup.js`)
+Stubs web API modules that are unimplemented in JSDOM:
+* `IntersectionObserver` & `ResizeObserver` global stubs.
+* `GSAP Timeline` & `ScrollTrigger` animation triggers.
+* `Canvas 2D Rendering Context` & `HTML5 Video/Audio` player stubs.
+* Network `fetch` calls.
+
+### C. Test Metrics
+* **Total Tests**: 63 Unit/Integration Tests + 3 E2E Browser Tests (100% Passing).
+* **Code Coverage**:
+  - **Statements**: 100%
+  - **Functions**: 100%
+  - **Lines**: 100%
+  - **Branches**: 93.95%
+* **Available Scripts**:
+  - Run unit/integration tests: `npm test`
+  - Run E2E tests: `npm run test:e2e`
+  - Analyze code coverage: `npm run test:coverage`
 

@@ -7,7 +7,13 @@
       "**/node_modules/**",
       "README.md",
       ".gitignore",
-      ".firebaserc"
+      ".firebaserc",
+      "tests/**",
+      "coverage/**",
+      "playwright.config.js",
+      "vitest.config.js",
+      "package.json",
+      "package-lock.json"
     ],
     "cleanUrls": true,
     "trailingSlash": false,

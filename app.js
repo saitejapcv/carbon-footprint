@@ -24,6 +24,108 @@ const app = (() => {
     }
   };
 
+  // --- CONFIGURATION CONSTANTS ---
+  const CONSTANTS = {
+    EMISSIONS: {
+      CAR_COEFF: 52 * 0.00035, // Annual tonnes per car mile per week
+      FLIGHT_COEFF: 0.4,       // Annual tonnes per flight
+      TRANSIT_COEFF: 52 * 0.0001, // Annual tonnes per transit mile per week
+      ELECTRICITY_BASE_COEFF: (12 / 0.15) * 0.00038, // Annual tonnes conversion per electricity dollar per month
+      HEATING_COAL: 2.8,       // Coal heating annual tonnes
+      HEATING_ELECTRIC: 0.3,   // Electric heating annual tonnes
+      HEATING_GAS: 1.2,        // Gas heating annual tonnes (default)
+      DIET_AVERAGE: 1.6,       // Average diet annual tonnes
+      DIET_HEAVY_MEAT: 2.8,    // Heavy meat diet annual tonnes
+      DIET_VEGETARIAN: 0.8,    // Vegetarian diet annual tonnes
+      LOCAL_REDUCTION_MAX: 0.15, // Max 15% reduction for local food share
+      FOOD_WASTE_INCREASE_COEFF: 0.40, // 40% increase factor based on food waste index
+      POLLUTION_FACTOR_MIN_DAILY: 5.5,  // Daily kg CO2e for 0% pollution factor mapping
+      POLLUTION_FACTOR_MAX_DAILY: 44.0  // Daily kg CO2e for 100% pollution factor mapping
+    },
+    STAGE_BOUNDARIES: {
+      STAGE_1_MAX: 11.0,
+      STAGE_2_MAX: 22.0,
+      STAGE_3_MAX: 33.0,
+      STAGE_4_MAX: 44.0
+    },
+    GLASS_DEFAULTS: {
+      borderRadius: 16,
+      borderWidth: 0.07,
+      brightness: 50,
+      opacity: 0.93,
+      blur: 11,
+      displace: 0,
+      backgroundOpacity: 0.15,
+      saturation: 1.8,
+      distortionScale: -180,
+      redOffset: 0,
+      greenOffset: 10,
+      blueOffset: 20,
+      xChannel: 'R',
+      yChannel: 'G',
+      mixBlendMode: 'difference'
+    }
+  };
+
+  // --- DOM ELEMENT REFERENCES ---
+  const DOM = {};
+
+  /**
+   * Updates all DOM references cached in the DOM object.
+   * Can be called during initialization or when the DOM is dynamically replaced (e.g. in tests).
+   */
+  function updateDOMReferences() {
+    DOM.body = document.body;
+    DOM.documentElement = document.documentElement;
+    DOM.bgCanvas = document.getElementById('bg-canvas');
+    DOM.heroContainer = document.getElementById('hero-container');
+    DOM.heroSection = document.getElementById('hero-section');
+    DOM.mobileMenuTrigger = document.querySelector('.mobile-menu-trigger');
+    DOM.mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+    DOM.mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+    
+    // Calculator inputs
+    DOM.sliderCar = document.getElementById('slider-car');
+    DOM.sliderFlights = document.getElementById('slider-flights');
+    DOM.sliderTransit = document.getElementById('slider-transit');
+    DOM.sliderElectricity = document.getElementById('slider-electricity');
+    DOM.sliderCleanEnergy = document.getElementById('slider-clean-energy');
+    DOM.sliderLocal = document.getElementById('slider-local');
+    DOM.sliderWaste = document.getElementById('slider-waste');
+    DOM.controlHeating = document.getElementById('control-heating');
+    DOM.controlDiet = document.getElementById('control-diet');
+    DOM.syncEngineCheckbox = document.getElementById('sync-engine-checkbox');
+    
+    // Calculator outputs
+    DOM.resultCo2 = document.getElementById('result-co2');
+    DOM.meterFillBar = document.getElementById('meter-fill-bar');
+    DOM.feedbackGradeText = document.getElementById('feedback-grade-text');
+    DOM.feedbackDescText = document.getElementById('feedback-desc-text');
+    DOM.pollutionSlider = document.getElementById('pollution-slider');
+    DOM.sliderValLabel = document.getElementById('slider-val-label');
+    DOM.footerEmissionsIndex = document.getElementById('footer-emissions-index');
+    DOM.footerAccentTheme = document.getElementById('footer-accent-theme');
+    
+    // Articles Library
+    DOM.libraryGrid = document.getElementById('library-grid');
+    DOM.articlesLibrary = document.getElementById('articles-library');
+    DOM.navLibrary = document.getElementById('nav-library');
+    DOM.footerLibraryLink = document.getElementById('footer-library-link');
+    DOM.libraryClose = document.getElementById('library-close');
+    DOM.libraryBackdrop = document.getElementById('library-backdrop');
+    DOM.librarySearchInput = document.getElementById('library-search-input');
+    
+    // Article modal
+    DOM.articleModal = document.getElementById('article-modal');
+    DOM.modalBody = document.getElementById('modal-body');
+    DOM.modalArticleTag = document.getElementById('modal-article-tag');
+    DOM.modalClose = document.getElementById('modal-close');
+    
+    // Decay grid / video
+    DOM.assemblySection = document.getElementById('assembly-section');
+    DOM.assemblyVideo = document.getElementById('assembly-video');
+  }
+
   let applyPalette = null;
 
   const ECOSYSTEM_PALETTES = {
@@ -77,11 +179,34 @@ const app = (() => {
     }
   };
 
+  /**
+   * Normalizes a short 3-digit hex color string (e.g. #f00) to a full 6-digit hex color string (e.g. #ff0000).
+   * @param {string} hex - The hex color string to normalize.
+   * @returns {string} The normalized hex color string.
+   */
   function normalizeHex(hex) {
     if (hex.length === 4) {
       return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
     }
     return hex;
+  }
+
+  /**
+   * [SECURITY] [XSS Prevention]
+   * Escapes special HTML characters in a string to prevent Cross-Site Scripting (XSS).
+   * @param {string} str - The string to escape.
+   * @returns {string} The escaped HTML string.
+   */
+  function escapeHTML(str) {
+    if (typeof str !== 'string') {
+      return '';
+    }
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   function createGlassSurface(element, options = {}) {
@@ -1430,6 +1555,9 @@ const app = (() => {
   let librarySearchQuery = "";
 
   function initArticlesLibrary() {
+    activeFilterTag = "all";
+    librarySearchQuery = "";
+
     const navLibraryBtn = document.getElementById('nav-library');
     const footerLibraryBtn = document.getElementById('footer-library-link');
     const libraryCloseBtn = document.getElementById('library-close');
@@ -1505,14 +1633,20 @@ const app = (() => {
     filtered.forEach(art => {
       const card = document.createElement('div');
       card.className = 'library-card';
+      // [SECURITY] [XSS Prevention] Escape all dynamic parameters before inserting into DOM templates via innerHTML
+      const safeId = escapeHTML(art.id);
+      const safeTag = escapeHTML(art.tag);
+      const safeTitle = escapeHTML(art.title);
+      const safeSummary = escapeHTML(art.summary);
+      const safeReadTime = escapeHTML(art.readTime);
       card.innerHTML = `
         <div>
-          <span class="lib-card-tag">ARTICLE ${art.id} — ${art.tag}</span>
-          <h3 class="lib-card-title">${art.title}</h3>
-          <p class="lib-card-summary">${art.summary}</p>
+          <span class="lib-card-tag">ARTICLE ${safeId} — ${safeTag}</span>
+          <h3 class="lib-card-title">${safeTitle}</h3>
+          <p class="lib-card-summary">${safeSummary}</p>
         </div>
         <div class="lib-card-footer">
-          <span>READ TIME: ${art.readTime}</span>
+          <span>READ TIME: ${safeReadTime}</span>
           <span class="lib-card-read-more">READ FULL ARTICLE</span>
         </div>
       `;
@@ -1569,10 +1703,8 @@ const app = (() => {
             valEl.textContent = s.format(val);
           } else if (s.prefix) {
             valEl.textContent = `${s.prefix}${val}`;
-          } else if (s.suffix) {
-            valEl.textContent = `${val}${s.suffix}`;
           } else {
-            valEl.textContent = val;
+            valEl.textContent = `${val}${s.suffix}`;
           }
           calculateCarbonFootprint();
         });
@@ -1607,52 +1739,55 @@ const app = (() => {
     calculateCarbonFootprint();
   }
 
+  /**
+   * Calculates the carbon footprint dynamically based on current slider values,
+   * updates the emissions meter progress, and syncs the environmental state.
+   */
   function calculateCarbonFootprint() {
-    // 1. Gather values
-    const carMiles = parseFloat(document.getElementById('slider-car')?.value || 0);
-    const flights = parseFloat(document.getElementById('slider-flights')?.value || 0);
-    const transitMiles = parseFloat(document.getElementById('slider-transit')?.value || 0);
-    const electricityBill = parseFloat(document.getElementById('slider-electricity')?.value || 0);
-    const cleanEnergyShare = parseFloat(document.getElementById('slider-clean-energy')?.value || 0);
+    // 0. Update DOM references in case the DOM was replaced or elements were removed
+    updateDOMReferences();
+    // 1. Gather values from cached DOM elements
+    const carMiles = parseFloat(DOM.sliderCar?.value || 0);
+    const flights = parseFloat(DOM.sliderFlights?.value || 0);
+    const transitMiles = parseFloat(DOM.sliderTransit?.value || 0);
+    const electricityBill = parseFloat(DOM.sliderElectricity?.value || 0);
+    const cleanEnergyShare = parseFloat(DOM.sliderCleanEnergy?.value || 0);
     
     let heatingFuel = 'gas';
-    const heatingActiveBtn = document.querySelector('#control-heating .calc-segment-btn.active');
+    const heatingActiveBtn = DOM.controlHeating?.querySelector('.calc-segment-btn.active');
     if (heatingActiveBtn) {
       heatingFuel = heatingActiveBtn.dataset.val;
     }
     
     let dietProfile = 'average';
-    const dietActiveBtn = document.querySelector('#control-diet .calc-segment-btn.active');
+    const dietActiveBtn = DOM.controlDiet?.querySelector('.calc-segment-btn.active');
     if (dietActiveBtn) {
       dietProfile = dietActiveBtn.dataset.val;
     }
     
-    const localShare = parseFloat(document.getElementById('slider-local')?.value || 0);
-    const foodWaste = parseFloat(document.getElementById('slider-waste')?.value || 0);
+    const localShare = parseFloat(DOM.sliderLocal?.value || 0);
+    const foodWaste = parseFloat(DOM.sliderWaste?.value || 0);
 
-    // 2. Perform math (Annual in tonnes, then convert to Daily in kg)
-    // Transport
-    const carEmissions = carMiles * 52 * 0.00035;
-    const flightEmissions = flights * 0.4;
-    const transitEmissions = transitMiles * 52 * 0.0001;
+    // 2. Perform math (Annual in tonnes, then convert to Daily in kg) using EMISSIONS constants
+    const carEmissions = carMiles * CONSTANTS.EMISSIONS.CAR_COEFF;
+    const flightEmissions = flights * CONSTANTS.EMISSIONS.FLIGHT_COEFF;
+    const transitEmissions = transitMiles * CONSTANTS.EMISSIONS.TRANSIT_COEFF;
     const transportTotal = carEmissions + flightEmissions + transitEmissions;
 
-    // Energy
-    const electricityBase = (electricityBill * 12 / 0.15) * 0.00038;
+    const electricityBase = electricityBill * CONSTANTS.EMISSIONS.ELECTRICITY_BASE_COEFF;
     const electricityEmissions = electricityBase * (1 - cleanEnergyShare / 100);
     
-    let heatingEmissions = 1.2; // default gas
-    if (heatingFuel === 'electric') heatingEmissions = 0.3;
-    else if (heatingFuel === 'coal') heatingEmissions = 2.8;
+    let heatingEmissions = CONSTANTS.EMISSIONS.HEATING_GAS;
+    if (heatingFuel === 'electric') heatingEmissions = CONSTANTS.EMISSIONS.HEATING_ELECTRIC;
+    else if (heatingFuel === 'coal') heatingEmissions = CONSTANTS.EMISSIONS.HEATING_COAL;
     const energyTotal = electricityEmissions + heatingEmissions;
 
-    // Diet
-    let dietBase = 1.6; // default average
-    if (dietProfile === 'heavy-meat') dietBase = 2.8;
-    else if (dietProfile === 'vegetarian') dietBase = 0.8;
+    let dietBase = CONSTANTS.EMISSIONS.DIET_AVERAGE;
+    if (dietProfile === 'heavy-meat') dietBase = CONSTANTS.EMISSIONS.DIET_HEAVY_MEAT;
+    else if (dietProfile === 'vegetarian') dietBase = CONSTANTS.EMISSIONS.DIET_VEGETARIAN;
     
-    const localReduction = 1 - 0.15 * (localShare / 100);
-    const wasteIncrease = 0.40 * (foodWaste / 50);
+    const localReduction = 1 - CONSTANTS.EMISSIONS.LOCAL_REDUCTION_MAX * (localShare / 100);
+    const wasteIncrease = CONSTANTS.EMISSIONS.FOOD_WASTE_INCREASE_COEFF * (foodWaste / 50);
     const dietTotal = dietBase * (localReduction + wasteIncrease);
 
     // Grand Total Annual in tonnes
@@ -1662,24 +1797,22 @@ const app = (() => {
     const grandTotalDailyKg = (grandTotalAnnualTonnes * 1000) / 365;
 
     // 3. Update DOM readout
-    const resultCo2El = document.getElementById('result-co2');
-    if (resultCo2El) {
-      resultCo2El.textContent = grandTotalDailyKg.toFixed(1);
+    if (DOM.resultCo2) {
+      DOM.resultCo2.textContent = grandTotalDailyKg.toFixed(1);
     }
 
     // 4. Update progress bar (0 - 55 kg CO2e / day)
-    const meterFillBar = document.getElementById('meter-fill-bar');
-    if (meterFillBar) {
+    if (DOM.meterFillBar) {
       const percentage = Math.min(100, Math.max(0, (grandTotalDailyKg / 55) * 100));
-      meterFillBar.style.width = `${percentage}%`;
+      DOM.meterFillBar.style.width = `${percentage}%`;
     }
 
-    // Determine stage based on daily emissions (0-11: Stage 1, 11-22: Stage 2, 22-33: Stage 3, 33-44: Stage 4, 44+: Stage 5)
+    // Determine stage based on daily emissions
     let stage = 1;
-    if (grandTotalDailyKg < 11.0) stage = 1;
-    else if (grandTotalDailyKg < 22.0) stage = 2;
-    else if (grandTotalDailyKg < 33.0) stage = 3;
-    else if (grandTotalDailyKg < 44.0) stage = 4;
+    if (grandTotalDailyKg < CONSTANTS.STAGE_BOUNDARIES.STAGE_1_MAX) stage = 1;
+    else if (grandTotalDailyKg < CONSTANTS.STAGE_BOUNDARIES.STAGE_2_MAX) stage = 2;
+    else if (grandTotalDailyKg < CONSTANTS.STAGE_BOUNDARIES.STAGE_3_MAX) stage = 3;
+    else if (grandTotalDailyKg < CONSTANTS.STAGE_BOUNDARIES.STAGE_4_MAX) stage = 4;
     else stage = 5;
 
     // Calculate category daily values (convert annual tonnes to daily kg)
@@ -1710,52 +1843,46 @@ const app = (() => {
     }
 
     // 5. Update feedback card with dynamic captions matching the stage danger
-    const gradeTextEl = document.getElementById('feedback-grade-text');
-    const descTextEl = document.getElementById('feedback-desc-text');
-    if (gradeTextEl && descTextEl) {
+    if (DOM.feedbackGradeText && DOM.feedbackDescText) {
       if (stage === 1) {
-        gradeTextEl.textContent = 'STAGE 1: LUSH & SAFE';
-        descTextEl.textContent = 'With per-person emissions this low, ecosystems stay in balance: forests grow, rivers run clear, and most species can adapt to local conditions.';
+        DOM.feedbackGradeText.textContent = 'STAGE 1: LUSH & SAFE';
+        DOM.feedbackDescText.textContent = 'With per-person emissions this low, ecosystems stay in balance: forests grow, rivers run clear, and most species can adapt to local conditions.';
       } else if (stage === 2) {
-        gradeTextEl.textContent = 'STAGE 2: EARLY DAMAGE';
-        descTextEl.textContent = 'Damage is visible but local: trees shed leaves out of season, lakes and rivers develop algal blooms, and bird migrations shift by days to weeks.';
+        DOM.feedbackGradeText.textContent = 'STAGE 2: EARLY DAMAGE';
+        DOM.feedbackDescText.textContent = 'Damage is visible but local: trees shed leaves out of season, lakes and rivers develop algal blooms, and bird migrations shift by days to weeks.';
       } else if (stage === 3) {
-        gradeTextEl.textContent = 'STAGE 3: TIPPING POINT';
-        descTextEl.textContent = 'The climate has crossed regional tipping points: 70–90% of warm-water coral reefs lost, half of all tree species show drought stress, and once-a-decade heat waves now hit every 2–3 years.';
+        DOM.feedbackGradeText.textContent = 'STAGE 3: TIPPING POINT';
+        DOM.feedbackDescText.textContent = 'The climate has crossed regional tipping points: 70–90% of warm-water coral reefs lost, half of all tree species show drought stress, and once-a-decade heat waves now hit every 2–3 years.';
       } else if (stage === 4) {
-        gradeTextEl.textContent = 'STAGE 4: SEVERE DAMAGE';
-        descTextEl.textContent = 'Severe damage: wildfire seasons months longer, plankton declines at the base of ocean food webs, and the first human-caused permanent extinctions of mammals and amphibians.';
+        DOM.feedbackGradeText.textContent = 'STAGE 4: SEVERE DAMAGE';
+        DOM.feedbackDescText.textContent = 'Severe damage: wildfire seasons months longer, plankton declines at the base of ocean food webs, and the first human-caused permanent extinctions of mammals and amphibians.';
       } else {
-        gradeTextEl.textContent = 'STAGE 5: COLLAPSE';
-        descTextEl.textContent = 'Total collapse: parts of the Amazon flip from rainforest to savanna, multi-meter sea-level rise locks in over centuries, and large regions of farmland can no longer grow traditional crops.';
+        DOM.feedbackGradeText.textContent = 'STAGE 5: COLLAPSE';
+        DOM.feedbackDescText.textContent = 'Total collapse: parts of the Amazon flip from rainforest to savanna, multi-meter sea-level rise locks in over centuries, and large regions of farmland can no longer grow traditional crops.';
       }
-      descTextEl.textContent += personalizedInsight;
+      DOM.feedbackDescText.textContent += personalizedInsight;
     }
 
     // 6. Sync with environmental engine if checked
-    const syncCheckbox = document.getElementById('sync-engine-checkbox');
-    if (syncCheckbox && syncCheckbox.checked) {
-      // Map 5.5 kg/day - 44.0 kg/day to 0.0 - 1.0 pollution factor
+    if (DOM.syncEngineCheckbox && DOM.syncEngineCheckbox.checked) {
       let factor = 0;
-      if (grandTotalDailyKg <= 5.5) {
+      if (grandTotalDailyKg <= CONSTANTS.EMISSIONS.POLLUTION_FACTOR_MIN_DAILY) {
         factor = 0;
-      } else if (grandTotalDailyKg >= 44.0) {
+      } else if (grandTotalDailyKg >= CONSTANTS.EMISSIONS.POLLUTION_FACTOR_MAX_DAILY) {
         factor = 1;
       } else {
-        factor = (grandTotalDailyKg - 5.5) / (44.0 - 5.5);
+        factor = (grandTotalDailyKg - CONSTANTS.EMISSIONS.POLLUTION_FACTOR_MIN_DAILY) / 
+                 (CONSTANTS.EMISSIONS.POLLUTION_FACTOR_MAX_DAILY - CONSTANTS.EMISSIONS.POLLUTION_FACTOR_MIN_DAILY);
       }
 
       state.pollutionFactor = factor;
-      document.documentElement.style.setProperty('--pollution-factor', factor);
+      DOM.documentElement.style.setProperty('--pollution-factor', factor);
 
-      // Update palette slider
-      const pollutionSlider = document.getElementById('pollution-slider');
-      const sliderValLabel = document.getElementById('slider-val-label');
-      if (pollutionSlider) {
-        pollutionSlider.value = Math.round(factor * 100);
+      if (DOM.pollutionSlider) {
+        DOM.pollutionSlider.value = Math.round(factor * 100);
       }
-      if (sliderValLabel) {
-        sliderValLabel.textContent = `${Math.round(factor * 100)}%`;
+      if (DOM.sliderValLabel) {
+        DOM.sliderValLabel.textContent = `${Math.round(factor * 100)}%`;
       }
 
       // Re-apply palette visual variables
@@ -1950,12 +2077,24 @@ const app = (() => {
     // Bold text
     cleanMd = cleanMd.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    // Parse links: [Text](URL)
-    cleanMd = cleanMd.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    // [SECURITY] [XSS Prevention] [Link Scheme Sanitization]
+    // Parse links: [Text](URL) and block malicious URIs (javascript:, data:, vbscript:)
+    cleanMd = cleanMd.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
+      const trimmedUrl = url.trim();
+      const lowerUrl = trimmedUrl.toLowerCase();
+      // Block non-http/https URI schemes to prevent XSS via javascript: or data:
+      const isSafe = !lowerUrl.startsWith('javascript:') && 
+                     !lowerUrl.startsWith('data:') && 
+                     !lowerUrl.startsWith('vbscript:');
+      let safeUrl = isSafe ? trimmedUrl : '#';
+      // Escape double quotes in URL to prevent breaking out of href attribute
+      safeUrl = safeUrl.replace(/"/g, '&quot;');
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    });
 
     // Blockquotes
-    cleanMd = cleanMd.replace(/^>\s+\[!(IMPORTANT|NOTE|WARNING|TIP|CAUTION)\]\s*$/gm, '');
-    cleanMd = cleanMd.replace(/^>\s+(.+)$/gm, '<blockquote>$1</blockquote>');
+    cleanMd = cleanMd.replace(/^&gt;\s+\[!(IMPORTANT|NOTE|WARNING|TIP|CAUTION)\]\s*$/gm, '');
+    cleanMd = cleanMd.replace(/^&gt;\s+(.+)$/gm, '<blockquote>$1</blockquote>');
     cleanMd = cleanMd.replace(/<\/blockquote>\n<blockquote>/g, '<br>');
 
     // Tables
@@ -2071,10 +2210,11 @@ const app = (() => {
       const htmlContent = parseMarkdownToHTML(markdown);
       modalBody.innerHTML = htmlContent;
     } catch (err) {
+      // [SECURITY] [XSS Prevention] Escape error message before rendering to prevent malicious HTML injection payloads
       modalBody.innerHTML = `
         <div style="padding: 2rem; border: 1px dashed rgba(239, 68, 68, 0.2); border-radius: 12px; background: rgba(239, 68, 68, 0.05); color: #f87171; text-align: center;">
           <h3 style="margin-bottom: 0.5rem; font-family:var(--font-mono); color:#ef4444;">Failed to load article</h3>
-          <p style="font-size:0.82rem; margin-bottom: 0; color:#fca5a5;">Error details: ${err.message}</p>
+          <p style="font-size:0.82rem; margin-bottom: 0; color:#fca5a5;">Error details: ${escapeHTML(err.message)}</p>
         </div>
       `;
     }
@@ -2118,6 +2258,7 @@ const app = (() => {
   }
 
   function init() {
+    updateDOMReferences();
     initCanvas();
     setupDOMListeners();
     initAssemblyGrid();
@@ -2132,9 +2273,24 @@ const app = (() => {
 
   // Public functions exposed
   return {
-    init
+    init,
+    // Exposed for testing
+    state,
+    normalizeHex,
+    interpolateColor,
+    parseMarkdownToHTML,
+    calculateCarbonFootprint,
+    ECOSYSTEM_PALETTES,
+    escapeHTML
   };
 })();
 
 // Initialize on DOM load
-window.addEventListener('DOMContentLoaded', app.init);
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', app.init);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = app;
+}
+
